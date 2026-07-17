@@ -1,0 +1,24 @@
+# hpa.yaml — Horizontal Pod Autoscaler
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: quote-api-hpa
+  namespace: hotel-quotes
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: quote-api
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  # Scale down slowly (avoid flapping)
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 60
