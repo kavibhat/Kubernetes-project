@@ -1,0 +1,78 @@
+# deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quote-api
+  namespace: hotel-quotes
+  labels:
+    app: quote-api
+    version: "1.0"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: quote-api
+  # Zero downtime rolling update
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1        # add 1 extra pod during update
+      maxUnavailable: 0  # never kill pod before new one ready
+  template:
+    metadata:
+      labels:
+        app: quote-api
+        version: "1.0"
+    spec:
+      # Spread pods across nodes for resilience
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: DoNotSchedule
+        labelSelector:
+          matchLabels:
+            app: quote-api
+      containers:
+      - name: quote-api
+        image: kavibhat/hotel-quote-api:latest
+        imagePullPolicy: Always
+        ports:
+        - name: http
+          containerPort: 3000
+        # Load config from ConfigMap
+        envFrom:
+        - configMapRef:
+            name: quote-api-config
+        # Resource limits — very important!
+        resources:
+          requests:        # minimum guaranteed
+            cpu: "50m"     # 0.05 CPU cores
+            memory: "64Mi"
+          limits:          # maximum allowed
+            cpu: "200m"    # 0.2 CPU cores
+            memory: "128Mi"
+        # Liveness — is the app alive?
+        # If this fails: pod is RESTARTED
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 20
+          failureThreshold: 3
+        # Readiness — is the app ready for traffic?
+        # If this fails: pod removed from Service
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          failureThreshold: 2
+        # Startup — give app time to boot
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          failureThreshold: 10
+          periodSeconds: 3
