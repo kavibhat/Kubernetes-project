@@ -1,0 +1,17 @@
+# service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: quote-api
+  namespace: hotel-quotes
+  labels:
+    app: quote-api
+spec:
+  selector:
+    app: quote-api
+  ports:
+  - name: http
+    port: 80          # service port
+    targetPort: 3000  # pod port
+    protocol: TCP
+  type: ClusterIP     # internal only
